@@ -38,6 +38,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->take(5)
             ->get();
 
+        $ahpResult = app(\App\Services\AhpCalculationService::class)->calculate();
+
         return Inertia::render('Dashboard', [
             'stats' => [
                 'total_debitur' => $totalDebitur,
@@ -48,6 +50,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'total_plafon_disetujui' => (float) $totalPlafonDisetujui,
             ],
             'latest_debiturs' => $latestDebitur,
+            'ahp' => [
+                'cr' => $ahpResult['cr'],
+                'is_consistent' => $ahpResult['is_consistent'],
+            ],
         ]);
     })->name('dashboard');
 
@@ -58,10 +64,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         $debitur = Debitur::with(['sawResult', 'penilaianDetails.kriteria'])
             ->where('no_anggota', $noAnggota)
+            ->latest()
             ->first();
+
+        $hasActiveLoan = Debitur::where('no_anggota', $noAnggota)
+            ->where('status_pelunasan', '!=', 'lunas')
+            ->exists();
 
         return Inertia::render('Anggota/Dashboard', [
             'debitur' => $debitur,
+            'can_apply' => !$hasActiveLoan,
         ]);
     })->name('anggota.dashboard');
 
@@ -80,6 +92,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['admin'])->group(function () {
         // Master Kriteria & AHP
         Route::get('/kriteria', [KriteriaController::class, 'index'])->name('kriteria.index');
+        Route::post('/kriteria/ahp', [KriteriaController::class, 'updateAhp'])->name('kriteria.ahp.update');
 
         // Manajemen Debitur
         Route::get('/debitur', [DebiturController::class, 'index'])->name('debitur.index');
@@ -87,6 +100,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/debitur', [DebiturController::class, 'store'])->name('debitur.store');
         Route::get('/debitur/{id}/edit', [DebiturController::class, 'edit'])->name('debitur.edit');
         Route::put('/debitur/{id}', [DebiturController::class, 'update'])->name('debitur.update');
+        Route::patch('/debitur/{id}/pelunasan', [DebiturController::class, 'togglePelunasan'])->name('debitur.pelunasan');
         Route::delete('/debitur/{id}', [DebiturController::class, 'destroy'])->name('debitur.destroy');
 
         // SPK SAW & Laporan

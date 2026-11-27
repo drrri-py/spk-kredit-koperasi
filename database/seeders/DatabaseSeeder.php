@@ -2,11 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Models\AhpComparison;
 use App\Models\User;
 use App\Models\Kriteria;
 use App\Models\SubKriteria;
 use App\Models\Debitur;
 use App\Models\PenilaianDetail;
+use App\Services\AhpCalculationService;
 use App\Services\SawCalculationService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -124,6 +126,36 @@ class DatabaseSeeder extends Seeder
                 );
             }
         }
+
+        // 3b. Matriks Perbandingan Berpasangan Awal AHP (Skala Saaty)
+        $defaultComparisons = [
+            ['C1', 'C2', 3.0],
+            ['C1', 'C3', 3.0],
+            ['C1', 'C4', 2.0],
+            ['C1', 'C5', 4.0],
+            ['C2', 'C3', 1.0],
+            ['C2', 'C4', 0.5],
+            ['C2', 'C5', 2.0],
+            ['C3', 'C4', 0.5],
+            ['C3', 'C5', 2.0],
+            ['C4', 'C5', 3.0],
+        ];
+
+        foreach ($defaultComparisons as [$k1, $k2, $nilai]) {
+            if (isset($kriteriaModels[$k1], $kriteriaModels[$k2])) {
+                AhpComparison::updateOrCreate(
+                    [
+                        'kriteria_1_id' => $kriteriaModels[$k1]->id,
+                        'kriteria_2_id' => $kriteriaModels[$k2]->id,
+                    ],
+                    ['nilai' => $nilai]
+                );
+            }
+        }
+
+        // Hitung bobot AHP dari matriks perbandingan awal
+        $ahpService = new AhpCalculationService(new SawCalculationService());
+        $ahpService->calculateAndApply();
 
         // 4. Data Alternatif Debitur
         $sampleDebitur = [

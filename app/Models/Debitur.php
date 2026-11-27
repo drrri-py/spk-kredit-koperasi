@@ -16,11 +16,14 @@ class Debitur extends Model
         'user_id',
         'no_anggota',
         'nama_lengkap',
+        'nik',
+        'unit_kerja',
         'alamat',
         'telepon',
         'nominal_pengajuan',
         'tenor_bulan',
         'status_verifikasi',
+        'status_pelunasan',
     ];
 
     public function user(): BelongsTo

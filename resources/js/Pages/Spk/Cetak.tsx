@@ -19,9 +19,13 @@ interface DebiturResult {
 
 interface Props {
     debiturs: DebiturResult[];
+    ahp?: {
+        cr: number;
+        is_consistent: boolean;
+    };
 }
 
-export default function SpkCetak({ debiturs }: Props) {
+export default function SpkCetak({ debiturs, ahp }: Props) {
     useEffect(() => {
         const timer = setTimeout(() => {
             window.print();
@@ -101,7 +105,7 @@ export default function SpkCetak({ debiturs }: Props) {
                 {/* PARAGRAF PENGANTAR */}
                 <div className="text-xs font-sans text-slate-700 mb-4 leading-relaxed text-justify">
                     Berdasarkan hasil pembobotan kriteria menggunakan metode <em>Analytic Hierarchy Process</em> (AHP) 
-                    dengan rasio konsistensi valid (CR = 0,0360 &lt; 0,10) serta perankingan preferensi 
+                    dengan rasio konsistensi {(ahp?.is_consistent ?? true) ? 'valid' : 'tercatat'} (CR = {(ahp?.cr ?? 0).toFixed(4).replace('.', ',')} {(ahp?.is_consistent ?? true) ? '<' : '>'} 0,10) serta perankingan preferensi 
                     <em> Simple Additive Weighting</em> (SAW), maka komite analis kredit menetapkan daftar rekomendasi 
                     pemberian fasilitas pinjaman bagi anggota sebagai berikut:
                 </div>

@@ -19,6 +19,7 @@ interface Debitur {
     nominal_pengajuan: number;
     tenor_bulan: number;
     status_verifikasi: string;
+    status_pelunasan?: 'belum_lunas' | 'lunas';
     created_at?: string;
     saw_result?: SawResult | null;
 }
@@ -35,9 +36,10 @@ interface Props {
         user: User;
     };
     debitur?: Debitur | null;
+    can_apply?: boolean;
 }
 
-export default function DashboardAnggota({ auth, debitur }: Props) {
+export default function DashboardAnggota({ auth, debitur, can_apply }: Props) {
     const user = auth.user;
 
     const formatRupiah = (val: number) => {
@@ -52,6 +54,7 @@ export default function DashboardAnggota({ auth, debitur }: Props) {
     const isSubmitted = !!debitur;
     const isAssessed = !!debitur?.saw_result;
     const isCompleted = isAssessed && debitur?.saw_result?.status_kelayakan;
+    const canApply = can_apply ?? (!debitur || debitur.status_pelunasan === 'lunas');
 
     return (
         <AuthenticatedLayout
@@ -63,7 +66,7 @@ export default function DashboardAnggota({ auth, debitur }: Props) {
                             Monitoring status pengajuan kredit dan data keanggotaan Koperasi Manunggal Perkasa
                         </p>
                     </div>
-                    {!debitur && (
+                    {canApply && (
                         <Link
                             href="/anggota/pengajuan"
                             className="inline-flex items-center px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded transition"
@@ -211,7 +214,13 @@ export default function DashboardAnggota({ auth, debitur }: Props) {
                                 </p>
                             </div>
 
-                            {debitur.saw_result ? (
+                            <div className="flex items-center gap-2">
+                                {debitur.status_pelunasan === 'lunas' && (
+                                    <span className="px-3 py-1 rounded text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                        PINJAMAN LUNAS
+                                    </span>
+                                )}
+                                {debitur.saw_result ? (
                                 <span
                                     className={`px-3 py-1 rounded text-xs font-bold ${
                                         debitur.saw_result.status_kelayakan === 'LAYAK'
@@ -228,6 +237,7 @@ export default function DashboardAnggota({ auth, debitur }: Props) {
                                     STATUS: MENUNGGU VERIFIKASI ANALIS
                                 </span>
                             )}
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

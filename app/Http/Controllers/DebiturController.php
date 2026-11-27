@@ -46,7 +46,7 @@ class DebiturController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'no_anggota' => 'required|string|unique:debiturs,no_anggota',
+            'no_anggota' => 'required|string|max:30',
             'nama_lengkap' => 'required|string|max:100',
             'nik' => 'nullable|string|max:20',
             'unit_kerja' => 'nullable|string|max:100',
@@ -108,7 +108,7 @@ class DebiturController extends Controller
         $debitur = Debitur::findOrFail($id);
 
         $request->validate([
-            'no_anggota' => 'required|string|unique:debiturs,no_anggota,' . $debitur->id,
+            'no_anggota' => 'required|string|max:30',
             'nama_lengkap' => 'required|string|max:100',
             'nik' => 'nullable|string|max:20',
             'unit_kerja' => 'nullable|string|max:100',
@@ -165,6 +165,23 @@ class DebiturController extends Controller
     }
 
     /**
+     * Ubah status pelunasan pinjaman debitur oleh admin
+     */
+    public function togglePelunasan(int $id): RedirectResponse
+    {
+        $debitur = Debitur::findOrFail($id);
+
+        $newStatus = $debitur->status_pelunasan === 'lunas' ? 'belum_lunas' : 'lunas';
+        $debitur->update(['status_pelunasan' => $newStatus]);
+
+        $message = $newStatus === 'lunas'
+            ? "Pinjaman {$debitur->nama_lengkap} ({$debitur->no_anggota}) ditandai LUNAS. Anggota kini dapat mengajukan pinjaman baru."
+            : "Status pelunasan {$debitur->nama_lengkap} ({$debitur->no_anggota}) dikembalikan menjadi BELUM LUNAS.";
+
+        return redirect()->route('debitur.index')->with('success', $message);
+    }
+
+    /**
      * Tampilkan formulir pengajuan pinjaman mandiri anggota
      */
     public function createMandiri(): Response|RedirectResponse
@@ -175,9 +192,12 @@ class DebiturController extends Controller
             return redirect()->route('login');
         }
 
-        $existingDebitur = Debitur::where('no_anggota', $user->no_anggota)->first();
+        $existingDebitur = Debitur::where('no_anggota', $user->no_anggota)
+            ->where('status_pelunasan', '!=', 'lunas')
+            ->latest()
+            ->first();
 
-        // Kirim status apakah anggota sudah memiliki pinjaman aktif
+        // Kirim status apakah anggota sudah memiliki pinjaman aktif (belum lunas)
         return Inertia::render('Anggota/Pengajuan', [
             'user' => $user,
             'existingDebitur' => $existingDebitur,
@@ -192,9 +212,12 @@ class DebiturController extends Controller
     {
         $user = Auth::user();
 
-        $existingDebitur = Debitur::where('no_anggota', $user->no_anggota)->first();
+        $existingDebitur = Debitur::where('no_anggota', $user->no_anggota)
+            ->where('status_pelunasan', '!=', 'lunas')
+            ->latest()
+            ->first();
         if ($existingDebitur) {
-            return redirect()->route('anggota.dashboard')->with('error', 'Anda sudah memiliki berkas permohonan pinjaman aktif.');
+            return redirect()->route('anggota.dashboard')->with('error', 'Anda sudah memiliki berkas permohonan pinjaman aktif yang belum lunas.');
         }
 
         $request->validate([

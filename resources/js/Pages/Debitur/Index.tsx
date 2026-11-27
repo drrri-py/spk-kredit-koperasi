@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { PageProps } from '@/types';
 
 interface KriteriaDetail {
     id: number;
@@ -29,6 +30,7 @@ interface Debitur {
     nominal_pengajuan: number;
     tenor_bulan: number;
     status_verifikasi: string;
+    status_pelunasan: 'belum_lunas' | 'lunas';
     saw_result?: SawResult | null;
     penilaian_details?: KriteriaDetail[];
 }
@@ -39,7 +41,8 @@ interface Props {
 
 export default function DebiturIndex({ debiturs }: Props) {
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterStatus, setFilterStatus] = useState<'semua' | 'menunggu' | 'selesai'>('semua');
+    const [filterStatus, setFilterStatus] = useState<'semua' | 'menunggu' | 'selesai' | 'lunas'>('semua');
+    const { flash } = usePage<PageProps<{ flash?: { success?: string; error?: string } }>>().props;
 
     const formatRupiah = (val: number) => {
         return new Intl.NumberFormat('id-ID', {
@@ -55,12 +58,14 @@ export default function DebiturIndex({ debiturs }: Props) {
     const countSelesai = debiturs.filter(
         (d) => d.status_verifikasi !== 'menunggu_penilaian' && d.saw_result
     ).length;
+    const countLunas = debiturs.filter((d) => d.status_pelunasan === 'lunas').length;
 
     const filteredDebiturs = debiturs.filter((d) => {
         const isMenunggu = d.status_verifikasi === 'menunggu_penilaian' || !d.saw_result;
 
         if (filterStatus === 'menunggu' && !isMenunggu) return false;
         if (filterStatus === 'selesai' && isMenunggu) return false;
+        if (filterStatus === 'lunas' && d.status_pelunasan !== 'lunas') return false;
 
         const query = searchQuery.toLowerCase();
         return (
@@ -73,6 +78,16 @@ export default function DebiturIndex({ debiturs }: Props) {
     const handleDelete = (id: number, nama: string) => {
         if (confirm(`Hapus permanen berkas permohonan debitur: "${nama}"? Data penilaian dan hasil kalkulasi SAW terkait akan turut dihapus.`)) {
             router.delete(`/debitur/${id}`);
+        }
+    };
+
+    const handleTogglePelunasan = (debitur: Debitur) => {
+        const isLunas = debitur.status_pelunasan === 'lunas';
+        const msg = isLunas
+            ? `Kembalikan status pinjaman "${debitur.nama_lengkap}" menjadi BELUM LUNAS?`
+            : `Tandai pinjaman "${debitur.nama_lengkap}" sebagai LUNAS? Anggota akan dapat mengajukan pinjaman baru.`;
+        if (confirm(msg)) {
+            router.patch(route('debitur.pelunasan', debitur.id), {}, { preserveScroll: true });
         }
     };
 
@@ -98,6 +113,12 @@ export default function DebiturIndex({ debiturs }: Props) {
             <Head title="Daftar Berkas Debitur - Petugas Analis" />
 
             <div className="space-y-4 max-w-7xl mx-auto">
+                {flash?.success && (
+                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2.5 rounded text-xs font-medium">
+                        {flash.success}
+                    </div>
+                )}
+
                 {/* Kontrol Penyaringan Data */}
                 <div className="bg-white p-3.5 border border-slate-200 rounded flex flex-col md:flex-row items-center justify-between gap-3">
                     {/* Tab Status Berkas */}
@@ -133,6 +154,17 @@ export default function DebiturIndex({ debiturs }: Props) {
                             }`}
                         >
                             Selesai Dinilai ({countSelesai})
+                        </button>
+
+                        <button
+                            onClick={() => setFilterStatus('lunas')}
+                            className={`px-3 py-1.5 rounded text-xs font-semibold transition ${
+                                filterStatus === 'lunas'
+                                    ? 'bg-indigo-700 text-white'
+                                    : 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
+                            }`}
+                        >
+                            Lunas ({countLunas})
                         </button>
                     </div>
 
@@ -199,7 +231,7 @@ export default function DebiturIndex({ debiturs }: Props) {
                                                     </p>
                                                 </td>
 
-                                                <td className="py-3 px-4">
+                                                <td className="py-3 px-4 space-y-1">
                                                     {isMenunggu ? (
                                                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
                                                             Menunggu Penilaian
@@ -209,6 +241,17 @@ export default function DebiturIndex({ debiturs }: Props) {
                                                             Diverifikasi
                                                         </span>
                                                     )}
+                                                    <div>
+                                                        {debitur.status_pelunasan === 'lunas' ? (
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                                LUNAS
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                                                Belum Lunas
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
 
                                                 <td className="py-3 px-4">
@@ -248,6 +291,19 @@ export default function DebiturIndex({ debiturs }: Props) {
                                                         >
                                                             {isMenunggu ? 'Beri Nilai' : 'Ubah'}
                                                         </Link>
+                                                        {!isMenunggu && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleTogglePelunasan(debitur)}
+                                                                className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
+                                                                    debitur.status_pelunasan === 'lunas'
+                                                                        ? 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                                                                        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
+                                                                }`}
+                                                            >
+                                                                {debitur.status_pelunasan === 'lunas' ? 'Batal Lunas' : 'Tandai Lunas'}
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={() => handleDelete(debitur.id, debitur.nama_lengkap)}
                                                             className="px-2 py-1 text-slate-500 hover:text-red-700 hover:bg-red-50 rounded text-xs font-medium transition"

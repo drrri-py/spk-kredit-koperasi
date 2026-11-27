@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Debitur;
 use App\Models\Kriteria;
 use App\Models\SawResult;
+use App\Services\AhpCalculationService;
 use App\Services\SawCalculationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -38,10 +39,16 @@ class SpkSawController extends Controller
             })
             ->values();
 
+        $ahpResult = app(AhpCalculationService::class)->calculate();
+
         // Render komponen Spk/Index
         return Inertia::render('Spk/Index', [
             'kriterias' => $kriterias,
             'debiturs'  => $debiturs,
+            'ahp'       => [
+                'cr' => $ahpResult['cr'],
+                'is_consistent' => $ahpResult['is_consistent'],
+            ],
         ]);
     }
 
@@ -57,9 +64,15 @@ class SpkSawController extends Controller
             })
             ->values();
 
+        $ahpResult = app(AhpCalculationService::class)->calculate();
+
         // Render komponen Spk/Cetak
         return Inertia::render('Spk/Cetak', [
             'debiturs' => $debiturs,
+            'ahp'      => [
+                'cr' => $ahpResult['cr'],
+                'is_consistent' => $ahpResult['is_consistent'],
+            ],
         ]);
     }
 
@@ -85,7 +98,11 @@ class SpkSawController extends Controller
             "Expires"             => "0"
         ];
 
-        $callback = function () use ($debiturs) {
+        $ahpResult = app(AhpCalculationService::class)->calculate();
+        $crFormatted = number_format($ahpResult['cr'], 4, '.', '');
+        $crStatus = $ahpResult['is_consistent'] ? 'Konsisten' : 'Tidak Konsisten';
+
+        $callback = function () use ($debiturs, $crFormatted, $crStatus) {
             $totalPlafon = $debiturs->sum(function ($d) {
                 return $d->sawResult ? $d->sawResult->rekomendasi_plafon : 0;
             });
@@ -122,7 +139,7 @@ class SpkSawController extends Controller
             echo '<tr><td colspan="10" class="title-instansi">KOPERASI KARYAWAN MANUNGGAL PERKASA</td></tr>';
             echo '<tr><td colspan="10" class="title-doc">REKAPITULASI EVALUASI KELAYAKAN PINJAMAN KREDIT ANGGOTA</td></tr>';
             echo '<tr><td colspan="10" class="meta-text">Wilayah Kerja: Kabupaten Cirebon | Metode Evaluasi: Analytic Hierarchy Process (AHP) & Simple Additive Weighting (SAW)</td></tr>';
-            echo '<tr><td colspan="10" class="meta-text">Tanggal Dokumen: ' . $tanggalDokumen . ' | Parameter Konsistensi AHP: CR = 0.0360 (Konsisten)</td></tr>';
+            echo '<tr><td colspan="10" class="meta-text">Tanggal Dokumen: ' . $tanggalDokumen . ' | Parameter Konsistensi AHP: CR = ' . $crFormatted . ' (' . $crStatus . ')</td></tr>';
             echo '<tr><td colspan="10"></td></tr>';
             echo '</table>';
 

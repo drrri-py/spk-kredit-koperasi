@@ -4,8 +4,8 @@ import { Head, useForm, Link } from '@inertiajs/react';
 
 interface SubKriteria {
     id: number;
-    nama_sub: string;
-    nilai_skor: number;
+    deskripsi: string;
+    nilai_bobot: number;
 }
 
 interface Kriteria {
@@ -13,7 +13,7 @@ interface Kriteria {
     kode: string;
     nama_kriteria: string;
     tipe: 'benefit' | 'cost';
-    bobot_persen: number;
+    bobot_ahp: number;
     sub_kriterias: SubKriteria[];
 }
 
@@ -164,6 +164,30 @@ export default function DebiturEdit({ debitur, kriterias, initial_penilaian }: P
                                 <option value="36">36 Bulan (3 Tahun)</option>
                             </select>
                         </div>
+
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1">Nomor Telepon / WhatsApp</label>
+                            <input
+                                type="text"
+                                className="w-full text-xs font-mono rounded border-slate-300 focus:border-slate-800 focus:ring-slate-800 py-2"
+                                value={data.telepon}
+                                onChange={(e) => setData('telepon', e.target.value)}
+                                required
+                            />
+                            {errors.telepon && <p className="text-red-600 text-xs mt-1">{errors.telepon}</p>}
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold text-slate-700 mb-1">Alamat Lengkap</label>
+                            <input
+                                type="text"
+                                className="w-full text-xs rounded border-slate-300 focus:border-slate-800 focus:ring-slate-800 py-2"
+                                value={data.alamat}
+                                onChange={(e) => setData('alamat', e.target.value)}
+                                required
+                            />
+                            {errors.alamat && <p className="text-red-600 text-xs mt-1">{errors.alamat}</p>}
+                        </div>
                     </div>
                 </div>
 
@@ -201,14 +225,14 @@ export default function DebiturEdit({ debitur, kriterias, initial_penilaian }: P
                                         <div className="flex items-center space-x-2 text-[11px] text-slate-500">
                                             <span>Sifat: <strong className="uppercase font-semibold">{kriteria.tipe}</strong></span>
                                             <span>•</span>
-                                            <span>Bobot AHP: <strong>{(kriteria.bobot_persen * 100).toFixed(0)}%</strong></span>
+                                            <span>Bobot AHP: <strong>{(Number(kriteria.bobot_ahp) * 100).toFixed(2)}%</strong></span>
                                         </div>
                                     </div>
 
                                     {/* Pilihan Radio / Sub-Kriteria */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-1">
                                         {kriteria.sub_kriterias.map((sub) => {
-                                            const isChecked = Number(selectedSkor) === Number(sub.nilai_skor);
+                                            const isChecked = Number(selectedSkor) === Number(sub.nilai_bobot);
 
                                             return (
                                                 <label
@@ -222,16 +246,16 @@ export default function DebiturEdit({ debitur, kriterias, initial_penilaian }: P
                                                     <input
                                                         type="radio"
                                                         name={`kriteria_${kriteria.id}`}
-                                                        value={sub.nilai_skor}
+                                                        value={sub.nilai_bobot}
                                                         checked={isChecked}
-                                                        onChange={() => handlePenilaianChange(kriteria.id, sub.nilai_skor)}
+                                                        onChange={() => handlePenilaianChange(kriteria.id, Number(sub.nilai_bobot))}
                                                         className="mt-0.5 text-slate-900 focus:ring-slate-800"
                                                         required
                                                     />
                                                     <div className="ml-2">
-                                                        <p className="leading-tight">{sub.nama_sub}</p>
+                                                        <p className="leading-tight">{sub.deskripsi}</p>
                                                         <span className="text-[10px] text-slate-400 font-mono">
-                                                            Skor: {sub.nilai_skor}
+                                                            Skor: {sub.nilai_bobot}
                                                         </span>
                                                     </div>
                                                 </label>

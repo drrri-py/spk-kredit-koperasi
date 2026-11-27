@@ -29,9 +29,13 @@ interface Debitur {
 interface Props {
     stats: Stats;
     latest_debiturs: Debitur[];
+    ahp?: {
+        cr: number;
+        is_consistent: boolean;
+    };
 }
 
-export default function Dashboard({ stats, latest_debiturs }: Props) {
+export default function Dashboard({ stats, latest_debiturs, ahp }: Props) {
     const formatRupiah = (val: number) => {
         return new Intl.NumberFormat('id-ID', {
             style: 'currency',
@@ -100,7 +104,7 @@ export default function Dashboard({ stats, latest_debiturs }: Props) {
                             </h3>
                         </div>
                         <p className="text-xs text-slate-600 mt-0.5">
-                            Rasio Inkonsistensi: <span className="font-mono font-semibold text-slate-900">CR = 0.0360 &lt; 0.10</span> (Matriks Perbandingan Berpasangan Terbukti Konsisten).
+                            Rasio Inkonsistensi: <span className="font-mono font-semibold text-slate-900">CR = {(ahp?.cr ?? 0).toFixed(4)} {(ahp?.is_consistent ?? true) ? '<' : '>'} 0.10</span> ({(ahp?.is_consistent ?? true) ? 'Matriks Perbandingan Berpasangan Terbukti Konsisten' : 'Perlu Penyesuaian Matriks'}).
                         </p>
                     </div>
                     <Link

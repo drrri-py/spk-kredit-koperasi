@@ -10,7 +10,7 @@ interface KriteriaDetail {
         kode: string;
         nama_kriteria: string;
         tipe: 'benefit' | 'cost';
-        bobot_persen: number;
+        bobot_ahp: number;
     };
     nilai_skor: number;
 }
@@ -39,15 +39,19 @@ interface Kriteria {
     kode: string;
     nama_kriteria: string;
     tipe: 'benefit' | 'cost';
-    bobot_persen: number;
+    bobot_ahp: number;
 }
 
 interface Props {
     kriterias?: Kriteria[];
     debiturs?: Debitur[];
+    ahp?: {
+        cr: number;
+        is_consistent: boolean;
+    };
 }
 
-export default function SpkSawIndex({ kriterias = [], debiturs = [] }: Props) {
+export default function SpkSawIndex({ kriterias = [], debiturs = [], ahp }: Props) {
     const [activeTab, setActiveTab] = useState<'rekap' | 'matriks'>('rekap');
 
     const formatRupiah = (val: number) => {
@@ -117,8 +121,11 @@ export default function SpkSawIndex({ kriterias = [], debiturs = [] }: Props) {
                             </span>
                         </div>
                         <p className="text-xs text-slate-600 mt-0.5">
-                            Pembobotan kriteria menggunakan AHP dengan rasio inkonsistensi valid:{' '}
-                            <span className="font-mono font-semibold text-slate-900">CR = 0.0360 &lt; 0.10</span> (Matriks Konsisten).
+                            Pembobotan kriteria menggunakan AHP dengan rasio inkonsistensi:{' '}
+                            <span className="font-mono font-semibold text-slate-900">
+                                CR = {(ahp?.cr ?? 0).toFixed(4)} {(ahp?.is_consistent ?? true) ? '<' : '>'} 0.10
+                            </span>{' '}
+                            ({(ahp?.is_consistent ?? true) ? 'Matriks Konsisten' : 'Belum Konsisten'}).
                         </p>
                     </div>
                     <div className="flex space-x-1 bg-slate-100 p-1 rounded border border-slate-200 text-xs font-medium">
@@ -247,7 +254,7 @@ export default function SpkSawIndex({ kriterias = [], debiturs = [] }: Props) {
                                         <th className="py-3 px-4">Nama Debitur</th>
                                         {kriterias.map((k) => (
                                             <th key={k.id} className="py-3 px-3 text-center font-mono">
-                                                {k.kode} ({(k.bobot_persen * 100).toFixed(0)}%)
+                                                {k.kode} ({(Number(k.bobot_ahp) * 100).toFixed(2)}%)
                                             </th>
                                         ))}
                                     </tr>
